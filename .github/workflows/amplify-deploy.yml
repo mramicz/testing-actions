@@ -40,21 +40,39 @@ jobs:
             # Create new app
             APP_ID=$(aws amplify create-app --name ${{ github.event.repository.name }} --query 'app.appId' --output text)
             
-            # Create branch
-            aws amplify create-branch --app-id $APP_ID --branch-name ${{ github.ref_name }} \
+            # Create branch with Next.js configuration
+            aws amplify create-branch \
+              --app-id $APP_ID \
+              --branch-name ${{ github.ref_name }} \
               --framework "Next.js - SSR" \
               --stage PRODUCTION \
               --enable-auto-build
-            
-            # Create webhook for automatic deployments
-            aws amplify create-webhook --app-id $APP_ID --branch-name ${{ github.ref_name }}
           fi
           
           echo "AMPLIFY_APP_ID=$APP_ID" >> $GITHUB_ENV
 
-      - name: Deploy to AWS Amplify
+      - name: Package and Upload
         run: |
-          aws amplify start-deployment \
+          # Create deployment zip with build output
+          zip -r deployment.zip .next public package.json package-lock.json next.config.ts
+          
+          # Create S3 bucket for artifacts if it doesn't exist
+          BUCKET_NAME="${{ env.AMPLIFY_APP_ID }}-deploys"
+          aws s3 mb s3://$BUCKET_NAME --region ${{ secrets.AWS_REGION }} || true
+          
+          # Upload to S3
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          S3_KEY="deployments/$TIMESTAMP/deployment.zip"
+          aws s3 cp deployment.zip s3://$BUCKET_NAME/$S3_KEY
+          
+          # Generate S3 URL
+          S3_URL="s3://$BUCKET_NAME/$S3_KEY"
+          echo "S3_ARTIFACT_URL=$S3_URL" >> $GITHUB_ENV
+
+      - name: Deploy to Amplify
+        run: |
+          aws amplify start-job \
             --app-id ${{ env.AMPLIFY_APP_ID }} \
             --branch-name ${{ github.ref_name }} \
-            --job-type RELEASE
+            --job-type RELEASE \
+            --source ${{ env.S3_ARTIFACT_URL }}
