@@ -52,14 +52,9 @@ jobs:
           
           echo "AMPLIFY_APP_ID=$APP_ID" >> $GITHUB_ENV
 
-      - name: Package Application
-        run: |
-          zip -r build.zip .next node_modules public package.json package-lock.json next.config.ts
-          
       - name: Deploy to AWS Amplify
         run: |
-          aws amplify start-job \
+          aws amplify start-deployment \
             --app-id ${{ env.AMPLIFY_APP_ID }} \
             --branch-name ${{ github.ref_name }} \
-            --job-type RELEASE \
-            --source-url "build.zip"
+            --job-type RELEASE
