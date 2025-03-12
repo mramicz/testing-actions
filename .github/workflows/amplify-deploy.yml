@@ -71,7 +71,7 @@ jobs:
 
       - name: Deploy to Amplify
         run: |
-          aws amplify start-deployment \
+          aws amplify start-job \
             --app-id ${{ env.AMPLIFY_APP_ID }} \
             --branch-name ${{ github.ref_name }} \
             --source-url ${{ env.S3_ARTIFACT_URL }}
