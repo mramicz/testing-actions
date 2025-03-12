@@ -74,4 +74,5 @@ jobs:
           aws amplify start-job \
             --app-id ${{ env.AMPLIFY_APP_ID }} \
             --branch-name ${{ github.ref_name }} \
+            --job-type RELEASE \
             --source-url ${{ env.S3_ARTIFACT_URL }}
