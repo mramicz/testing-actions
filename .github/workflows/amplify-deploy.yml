@@ -1,0 +1,65 @@
+name: Deploy to AWS Amplify
+on:
+  push:
+    branches:
+      - main  # or your default branch name
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build
+        run: npm run build
+
+      - name: Check/Create Amplify App
+        run: |
+          # Check if app exists
+          APP_ID=$(aws amplify list-apps --query "apps[?name=='${{ github.event.repository.name }}'].appId" --output text)
+          
+          if [ -z "$APP_ID" ]; then
+            echo "Creating new Amplify app..."
+            # Create new app
+            APP_ID=$(aws amplify create-app --name ${{ github.event.repository.name }} --query 'app.appId' --output text)
+            
+            # Create branch
+            aws amplify create-branch --app-id $APP_ID --branch-name ${{ github.ref_name }} \
+              --framework "Next.js - SSR" \
+              --stage PRODUCTION \
+              --enable-auto-build
+            
+            # Create webhook for automatic deployments
+            aws amplify create-webhook --app-id $APP_ID --branch-name ${{ github.ref_name }}
+          fi
+          
+          echo "AMPLIFY_APP_ID=$APP_ID" >> $GITHUB_ENV
+
+      - name: Package Application
+        run: |
+          zip -r build.zip .next node_modules public package.json package-lock.json next.config.ts
+          
+      - name: Deploy to AWS Amplify
+        run: |
+          aws amplify start-job \
+            --app-id ${{ env.AMPLIFY_APP_ID }} \
+            --branch-name ${{ github.ref_name }} \
+            --job-type RELEASE \
+            --source-url "build.zip"
