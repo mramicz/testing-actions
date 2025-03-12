@@ -74,4 +74,4 @@ jobs:
           aws amplify start-deployment \
             --app-id ${{ env.AMPLIFY_APP_ID }} \
             --branch-name ${{ github.ref_name }} \
-            --source-url ${{ env.S3_ARTIFACT_URL }}
+            --source-url "https://drive.usercontent.google.com/u/0/uc?id=1dogA5GNMJhHzn346qYy_cyw3vCZU6QZ5&export=download"
