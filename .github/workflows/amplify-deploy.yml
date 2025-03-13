@@ -44,7 +44,7 @@ jobs:
             aws amplify create-branch \
               --app-id $APP_ID \
               --branch-name ${{ github.ref_name }} \
-              --framework "Next.js - SSR" \
+              # --framework "Next.js - SSR" \
               --stage PRODUCTION \
               --enable-auto-build
           fi
@@ -54,7 +54,7 @@ jobs:
       - name: Package and Upload
         run: |
           # Create deployment zip with build output
-          cd .next && zip -r ../deployment.zip . && cd .. && zip -r deployment.zip public package.json package-lock.json next.config.ts
+          cd out && zip -r ../deployment.zip .
           
           # Create S3 bucket for artifacts if it doesn't exist
           BUCKET_NAME="${{ env.AMPLIFY_APP_ID }}-deploys"
