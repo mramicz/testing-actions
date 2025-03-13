@@ -60,11 +60,6 @@ jobs:
           BUCKET_NAME="${{ env.AMPLIFY_APP_ID }}-deploys"
           aws s3 mb s3://$BUCKET_NAME --region ${{ secrets.AWS_REGION }} || true
           
-          # Disable block public access for the bucket
-          aws s3api put-public-access-block \
-            --bucket $BUCKET_NAME \
-            --public-access-block-configuration "BlockPublicAcls=false,IgnorePublicAcls=false,BlockPublicPolicy=false,RestrictPublicBuckets=false"
-          
           # Update bucket policy to allow public read
           aws s3api put-bucket-policy \
             --bucket $BUCKET_NAME \
@@ -85,9 +80,6 @@ jobs:
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
           S3_KEY="deployments/$TIMESTAMP/deployment.zip"
           aws s3 cp deployment.zip s3://$BUCKET_NAME/$S3_KEY
-          
-          # Make the object public
-          aws s3api put-object-acl --bucket $BUCKET_NAME --key $S3_KEY --acl public-read
           
           # Generate public HTTPS URL
           S3_URL="https://$BUCKET_NAME.s3.${{ secrets.AWS_REGION }}.amazonaws.com/$S3_KEY"
