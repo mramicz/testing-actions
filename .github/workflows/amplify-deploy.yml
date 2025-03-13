@@ -44,7 +44,7 @@ jobs:
             aws amplify create-branch \
               --app-id $APP_ID \
               --branch-name ${{ github.ref_name }} \
-              # --framework "Next.js - SSR" \
+              --framework "Web - Static" \
               --stage PRODUCTION \
               --enable-auto-build
           fi
