@@ -54,7 +54,7 @@ jobs:
       - name: Package and Upload
         run: |
           # Create deployment zip with build output
-          zip -r deployment.zip .next public package.json package-lock.json next.config.ts
+          cd .next && zip -r ../deployment.zip . && cd .. && zip -r deployment.zip public package.json package-lock.json next.config.ts
           
           # Create S3 bucket for artifacts if it doesn't exist
           BUCKET_NAME="${{ env.AMPLIFY_APP_ID }}-deploys"
@@ -65,8 +65,11 @@ jobs:
           S3_KEY="deployments/$TIMESTAMP/deployment.zip"
           aws s3 cp deployment.zip s3://$BUCKET_NAME/$S3_KEY
           
-          # Generate S3 URL
-          S3_URL="s3://$BUCKET_NAME/$S3_KEY"
+          # Make the object public
+          aws s3api put-object-acl --bucket $BUCKET_NAME --key $S3_KEY --acl public-read
+          
+          # Generate public HTTPS URL
+          S3_URL="https://$BUCKET_NAME.s3.${{ secrets.AWS_REGION }}.amazonaws.com/$S3_KEY"
           echo "S3_ARTIFACT_URL=$S3_URL" >> $GITHUB_ENV
 
       - name: Deploy to Amplify
@@ -74,4 +77,4 @@ jobs:
           aws amplify start-deployment \
             --app-id ${{ env.AMPLIFY_APP_ID }} \
             --branch-name ${{ github.ref_name }} \
-            --source-url "https://drive.usercontent.google.com/u/0/uc?id=1i-uqJx46FlK0h-EFtjZbpq8NgRNS6gDz&export=download"
+            --source-url ${{ env.S3_ARTIFACT_URL }}
