@@ -44,7 +44,7 @@ jobs:
             aws amplify create-branch \
               --app-id $APP_ID \
               --branch-name ${{ github.ref_name }} \
-              --framework "Web - Static" \
+              # --framework "Next.js - SSR" \
               --stage PRODUCTION \
               --enable-auto-build
           fi
@@ -73,13 +73,34 @@ jobs:
           BUCKET_NAME="${{ env.AMPLIFY_APP_ID }}-deploys"
           aws s3 mb s3://$BUCKET_NAME --region ${{ secrets.AWS_REGION }} || true
           
+          # Disable block public access settings
+          aws s3api put-public-access-block \
+            --bucket $BUCKET_NAME \
+            --public-access-block-configuration "BlockPublicAcls=false,IgnorePublicAcls=false,BlockPublicPolicy=false,RestrictPublicBuckets=false"
+          
+          # Update bucket policy to allow public read
+          aws s3api put-bucket-policy \
+            --bucket $BUCKET_NAME \
+            --policy "{
+              \"Version\": \"2012-10-17\",
+              \"Statement\": [
+                {
+                  \"Sid\": \"PublicReadForAmplifyDeployments\",
+                  \"Effect\": \"Allow\",
+                  \"Principal\": \"*\",
+                  \"Action\": \"s3:GetObject\",
+                  \"Resource\": \"arn:aws:s3:::$BUCKET_NAME/*\"
+                }
+              ]
+            }"
+          
           # Upload to S3
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
           S3_KEY="deployments/$TIMESTAMP/deployment.zip"
           aws s3 cp deployment.zip s3://$BUCKET_NAME/$S3_KEY
           
-          # Get S3 URL
-          S3_URL="s3://$BUCKET_NAME/$S3_KEY"
+          # Generate public HTTPS URL
+          S3_URL="https://$BUCKET_NAME.s3.${{ secrets.AWS_REGION }}.amazonaws.com/$S3_KEY"
           echo "S3_ARTIFACT_URL=$S3_URL" >> $GITHUB_ENV
 
       - name: Deploy to Amplify
